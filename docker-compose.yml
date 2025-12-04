@@ -25,6 +25,15 @@ services:
       - mayan_data:/var/lib/mayan
     restart: always
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+
 volumes:
   postgres_data:
   mayan_data:
+  ollama_data:
