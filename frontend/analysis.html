@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse IA - Village Numérique Résilient</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>VNR</span>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="dashboard.html" class="menu-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>Tableau de Bord</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    <span>Documents</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span>Télécharger</span>
+                </a>
+                <a href="#" class="menu-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                    <span>Analyse IA</span>
+                </a>
+                <a href="admin.html" class="menu-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <circle cx="12" cy="12" r="9"></circle>
+                    </svg>
+                    <span>Panneau Admin</span>
+                </a>
+                <a href="login.html" class="menu-item logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span>Déconnexion</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="header-left">
+                    <h2>Analyse Intelligente des Documents</h2>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <span>Jean Dupont</span>
+                        <div class="avatar">JD</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Analysis Container -->
+            <div class="analysis-container">
+                <!-- Document Title -->
+                <div class="document-title-section">
+                    <h3>Plan d'Action 2025 - Stratégie Numérique</h3>
+                    <span class="analysis-badge">Résumé Généré Localement</span>
+                </div>
+
+                <!-- AI Summary Box -->
+                <section class="analysis-section">
+                    <div class="section-header">
+                        <h4>
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"></path>
+                            </svg>
+                            Résumé Généré par l'IA Locale
+                        </h4>
+                        <span class="local-badge">Traitement Local Sécurisé</span>
+                    </div>
+                    <div class="summary-box">
+                        <p>
+                            Ce document établit une stratégie numérique complète pour l'année 2025. Il couvre les quatre piliers essentiels de la transformation digitale de l'école : la infrastructure technologique, la cybersécurité, la formation des utilisateurs, et la gouvernance de la donnée.
+                        </p>
+                        <p>
+                            La stratégie met l'accent sur la résilience face aux défis technologiques, en particulier la protection des données sensibles des élèves et du personnel. Elle propose un calendrier d'implémentation progressif sur 12 mois, avec des jalons clés de validation.
+                        </p>
+                        <p>
+                            Le document recommande l'adoption d'outils open-source quand possible pour garantir l'autonomie technologique de l'établissement.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Keywords Section -->
+                <section class="analysis-section">
+                    <div class="section-header">
+                        <h4>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            Mots-Clés Extraits
+                        </h4>
+                    </div>
+                    <div class="keywords-box">
+                        <div class="keyword-list">
+                            <span class="keyword-tag">Cybersécurité</span>
+                            <span class="keyword-tag">Transformation Numérique</span>
+                            <span class="keyword-tag">Protection des Données</span>
+                            <span class="keyword-tag">Infrastructure IT</span>
+                            <span class="keyword-tag">Résilience Technologique</span>
+                            <span class="keyword-tag">RGPD Conformité</span>
+                            <span class="keyword-tag">Formation Utilisateurs</span>
+                            <span class="keyword-tag">Gouvernance Digitale</span>
+                            <span class="keyword-tag">Open Source</span>
+                            <span class="keyword-tag">Autonomie Technologique</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Local Processing Info -->
+                <section class="info-section">
+                    <div class="info-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <div class="info-content">
+                            <h5>Traitement Local Sécurisé</h5>
+                            <p>
+                                Tous les processus d'analyse IA s'exécutent localement sur les serveurs de l'école. Aucun document n'est transmis à des services externes. Les données des élèves et de l'établissement restent entièrement sous votre contrôle.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <div class="info-content">
+                            <h5>Protection Renforcée</h5>
+                            <p>
+                                Cette approche garantit une conformité totale au RGPD et offre une protection maximale contre les risques de fuite de données. Votre établissement garde l'autonomie technologique.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
