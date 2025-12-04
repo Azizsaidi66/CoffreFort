@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - Village Numérique Résilient</title>
     <link rel="stylesheet" href="style.css">
-    <script src="app.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -63,5 +62,44 @@
 
         <div class="login-background"></div>
     </div>
+
+    <script>
+        // Redirect if already logged in
+        if (localStorage.getItem("token")) {
+            window.location.href = "dashboard.html";
+        }
+
+        document.querySelector(".login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const role = document.getElementById("role").value;
+
+            const formData = new FormData();
+            formData.append("email", email);
+            formData.append("password", password);
+            formData.append("role", role);
+
+            try {
+                const res = await fetch("http://localhost:8001/auth/login", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem("token", data.access_token);
+                    window.location.href = "dashboard.html";
+                } else {
+                    alert(data.detail || "Login failed");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur de connexion au serveur");
+            }
+        });
+    </script>
 </body>
 </html>
