@@ -33,7 +33,23 @@ services:
       - ollama_data:/root/.ollama
     restart: always
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8001"
+    networks:
+      - internal
+
 volumes:
   postgres_data:
   mayan_data:
   ollama_data:
+
+networks:
+  internal:
+    driver: bridge
