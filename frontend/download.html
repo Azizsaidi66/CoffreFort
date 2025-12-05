@@ -69,9 +69,7 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="dashboard-header">
                 <div class="header-left">
                     <h2>Télécharger des Fichiers</h2>
@@ -84,7 +82,6 @@
                 </div>
             </header>
 
-            <!-- Search Bar -->
             <div class="search-section">
                 <div class="search-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -95,11 +92,9 @@
                 </div>
             </div>
 
-            <!-- Downloads Section -->
             <section class="downloads-section">
                 <h3>Gestion des Fichiers</h3>
                 
-                <!-- Upload Card -->
                 <div class="card" style="margin-bottom: 2rem;">
                     <h4 style="margin-top: 0; color: #6b4423;">Télécharger un Nouveau Fichier</h4>
                     <div class="upload-container">
@@ -121,7 +116,6 @@
                     <button class="download-button" onclick="uploadFile()" style="width: 100%;">Télécharger le Fichier</button>
                 </div>
 
-                <!-- Uploaded Files List -->
                 <h4 style="color: #6b4423; margin-top: 2rem;">Fichiers Téléchargés</h4>
                 <div class="table-container">
                     <table class="downloads-table">
@@ -134,7 +128,7 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="filesTableBody">
                             
                         </tbody>
                     </table>
@@ -146,6 +140,10 @@
     <script>
         const fileInput = document.getElementById('fileInput');
         const uploadBox = document.querySelector('.upload-box');
+        const filesTableBody = document.getElementById('filesTableBody'); // <<< ADDED
+
+        // In-memory storage so files appear in table (replace with backend later)
+        const uploadedFiles = []; // <<< ADDED
 
         // Handle file selection
         fileInput.addEventListener('change', function(e) {
@@ -178,22 +176,91 @@
             }
         });
 
+        // <<< ADDED
+        function addFileToTable(file) {
+            const date = new Date().toLocaleString();
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${file.name}</td>
+                <td>${file.type || "N/A"}</td>
+                <td>${(file.size/1024/1024).toFixed(2)} MB</td>
+                <td>${date}</td>
+                <td>
+                    <button onclick="summarizeFile('${file.name}')">Résumé IA</button>
+                </td>
+            `;
+            filesTableBody.prepend(tr);
+        }
+
+        // <<< ADDED
+        async function summarizeFile(name) {
+            const file = uploadedFiles.find(f => f.name === name);
+            if (!file) { alert("Fichier introuvable"); return; }
+
+            const text = await file.text();
+
+            const summary = "Résumé IA:\n" + text.substring(0, 400) + "...";
+
+            alert(summary);
+        }
+
         function uploadFile() {
             if (fileInput.files.length === 0) {
                 alert('Veuillez sélectionner un fichier à télécharger.');
                 return;
             }
             
-            const fileName = fileInput.files[0].name;
-            const fileSize = (fileInput.files[0].size / 1024 / 1024).toFixed(2);
+            const file = fileInput.files[0];
+            const fileName = file.name;
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
             
             alert(`Fichier "${fileName}" (${fileSize} MB) a été téléchargé avec succès!`);
-            
+
+            // <<< ADDED
+            uploadedFiles.push(file);
+            addFileToTable(file);
+
             // Reset form
             fileInput.value = '';
             uploadBox.querySelector('p:first-of-type').textContent = 'Cliquez pour sélectionner un fichier';
             document.getElementById('fileDescription').value = '';
         }
+        // ...existing code...
+
+// Auto-refresh when returning to the tab or window focus
+(function() {
+  let lastFetch = 0;
+  const MIN_INTERVAL = 2000; // ms
+
+  function tryLoadDocuments() {
+    const now = Date.now();
+    if (now - lastFetch < MIN_INTERVAL) return;
+    lastFetch = now;
+    if (typeof loadDocuments === 'function') loadDocuments();
+  }
+
+  // When tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') tryLoadDocuments();
+  });
+
+  // When window regains focus (alt-tab, switch app)
+  window.addEventListener('focus', tryLoadDocuments);
+
+  // Optional: poll periodically while page is visible (every 60s)
+  let pollInterval = null;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (!pollInterval) pollInterval = setInterval(tryLoadDocuments, 60000);
+    } else {
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    }
+  });
+
+  // Ensure initial load is called on DOMContentLoaded (if not already)
+  document.addEventListener('DOMContentLoaded', () => { tryLoadDocuments(); });
+})();
+
     </script>
 </body>
 </html>
