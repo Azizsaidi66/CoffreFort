@@ -9,6 +9,8 @@ from typing import Optional, List
 import os
 import requests
 import json
+import uuid
+from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import httpx
@@ -20,6 +22,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://ollama:11434")
 MAYAN_API_URL = os.getenv("MAYAN_API_URL", "http://mayan:8000")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./backend/uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ==================== DATABASE ====================
 engine = create_engine(DATABASE_URL)
@@ -58,6 +62,7 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     ai_summary = Column(Text, nullable=True)
     ai_keywords = Column(Text, nullable=True)
+    file_path = Column(String, nullable=True)
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -128,6 +133,7 @@ async def get_current_user(token: str, db: Session = Depends(get_db)):
 
 # ==================== FASTAPI APP ====================
 app = FastAPI(title="CoffreFort Backend", version="1.0.0")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # CORS Configuration
 app.add_middleware(
@@ -146,7 +152,6 @@ async def register(
     full_name: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Register a new user"""
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -207,7 +212,6 @@ async def get_current_user_info(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get current user information"""
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -221,7 +225,6 @@ async def list_users(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List all users (admin only)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -272,7 +275,6 @@ async def delete_user(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete user (admin only)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -293,7 +295,6 @@ async def set_access_window(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Set access time window for user (admin only)"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
@@ -316,7 +317,6 @@ async def get_access_window(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get access window for user"""
     window = db.query(AccessWindow).filter(AccessWindow.user_id == user_id).first()
     if not window:
         return {"start_time": "00:00", "end_time": "23:59"}
@@ -324,7 +324,6 @@ async def get_access_window(
     return {"start_time": window.start_time, "end_time": window.end_time}
 
 def check_access_allowed(current_time: str, window_start: str, window_end: str) -> bool:
-    """Check if current time is within access window"""
     current = datetime.strptime(current_time, "%H:%M").time()
     start = datetime.strptime(window_start, "%H:%M").time()
     end = datetime.strptime(window_end, "%H:%M").time()
@@ -339,7 +338,6 @@ async def check_access(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Check if user has access right now"""
     window = db.query(AccessWindow).filter(AccessWindow.user_id == current_user.id).first()
     
     if not window:
@@ -357,7 +355,6 @@ async def check_access(
 
 # ==================== AI ANALYSIS ====================
 async def analyze_with_ollama(text: str, background_tasks: BackgroundTasks) -> dict:
-    """Call Ollama for document analysis"""
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             # Pull model if needed
@@ -376,7 +373,6 @@ async def analyze_with_ollama(text: str, background_tasks: BackgroundTasks) -> d
             if response.status_code == 200:
                 summary = response.json().get("response", "")
                 
-                # Extract keywords
                 keyword_response = await client.post(
                     f"{OLLAMA_API_URL}/api/generate",
                     json={
@@ -405,7 +401,6 @@ async def analyze_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Analyze document with local AI"""
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -427,24 +422,23 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Upload document to Mayan EDMS"""
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
-        # Read file content
+        ext = os.path.splitext(file.filename)[1]
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        dest_path = os.path.join(UPLOAD_DIR, unique_name)
         content = await file.read()
-        
-        # Upload to Mayan EDMS
-        with open(f"/tmp/{file.filename}", "wb") as f:
+        with open(dest_path, "wb") as f:
             f.write(content)
         
-        # Create document record
         document = Document(
             mayan_id=f"doc_{current_user.id}_{datetime.utcnow().timestamp()}",
             title=title,
             description=description,
-            uploaded_by=current_user.id
+            uploaded_by=current_user.id,
+            file_path=unique_name
         )
         db.add(document)
         db.commit()
@@ -454,7 +448,8 @@ async def upload_document(
             "id": document.id,
             "mayan_id": document.mayan_id,
             "title": title,
-            "created_at": document.created_at
+            "created_at": document.created_at,
+            "file_url": f"/uploads/{unique_name}"
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -464,7 +459,6 @@ async def list_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List all available documents"""
     documents = db.query(Document).all()
     return [
         {
@@ -474,7 +468,8 @@ async def list_documents(
             "uploaded_by": d.uploaded_by,
             "created_at": d.created_at,
             "ai_summary": d.ai_summary,
-            "ai_keywords": d.ai_keywords
+            "ai_keywords": d.ai_keywords,
+            "file_url": (f"/uploads/{d.file_path}" if getattr(d, "file_path", None) else None)
         }
         for d in documents
     ]
@@ -485,7 +480,6 @@ async def get_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get document details"""
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -505,8 +499,6 @@ async def generate_mayan_sso_token(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Generate SSO token for Mayan EDMS"""
-    # Create a session token compatible with Mayan
     sso_token = create_access_token(
         data={
             "sub": current_user.id,
@@ -524,7 +516,6 @@ async def generate_mayan_sso_token(
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "CoffreFort Backend is running!",
         "version": "1.0.0",
