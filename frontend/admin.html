@@ -8,6 +8,68 @@
     <script src="app.js"></script>
 </head>
 <body>
+    <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const token = localStorage.getItem("token");
+        const role = localStorage.getItem("user_role");
+
+        if (!token || role !== "admin") {
+            alert("Accès administrateur requis");
+            window.location.href = "dashboard.html";
+            return;
+        }
+
+        // Load users table
+        const users = await loadUsers();
+        if (users && users.length > 0) {
+            const tbody = document.querySelector(".admin-table tbody");
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.full_name || user.email}</td>
+                    <td><span class="badge ${user.role === 'admin' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
+                    <td>
+                        <input type="time" class="start-time" value="08:00" data-user-id="${user.id}" style="width: 80px; padding: 4px;">
+                        -
+                        <input type="time" class="end-time" value="18:00" data-user-id="${user.id}" style="width: 80px; padding: 4px;">
+                    </td>
+                    <td>
+                        <button class="btn-small btn-edit" data-user-id="${user.id}">Modifier</button>
+                        <button class="btn-small btn-delete" data-user-id="${user.id}">Supprimer</button>
+                    </td>
+                </tr>
+            `).join("");
+
+            // Add event listeners
+            document.querySelectorAll(".btn-delete").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    if (confirm("Êtes-vous sûr?")) {
+                        const userId = btn.dataset.userId;
+                        if (await deleteUser(userId)) {
+                            location.reload();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Create user form
+        document.querySelector(".admin-form").addEventListener("submit", async (e) => {
+            if (e.target.closest(".admin-section:nth-of-type(2)")) {
+                e.preventDefault();
+                const name = document.getElementById("user-name").value;
+                const email = document.getElementById("user-email").value;
+                const role = document.getElementById("user-role").value;
+                const password = "DefaultPass123!"; // Should be generated securely
+
+                if (await createUser(email, password, name, role)) {
+                    alert("Utilisateur créé avec succès");
+                    location.reload();
+                }
+            }
+        });
+    });
+</script>
+
     <div class="dashboard-wrapper">
         <!-- Sidebar -->
         <aside class="sidebar">
