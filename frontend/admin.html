@@ -39,7 +39,6 @@
                 </tr>
             `).join("");
 
-            // Add event listeners
             document.querySelectorAll(".btn-delete").forEach(btn => {
                 btn.addEventListener("click", async () => {
                     if (confirm("Êtes-vous sûr?")) {
@@ -52,14 +51,13 @@
             });
         }
 
-        // Create user form
         document.querySelector(".admin-form").addEventListener("submit", async (e) => {
             if (e.target.closest(".admin-section:nth-of-type(2)")) {
                 e.preventDefault();
                 const name = document.getElementById("user-name").value;
                 const email = document.getElementById("user-email").value;
                 const role = document.getElementById("user-role").value;
-                const password = "DefaultPass123!"; // Should be generated securely
+                const password = "DefaultPass123!";
 
                 if (await createUser(email, password, name, role)) {
                     alert("Utilisateur créé avec succès");
@@ -71,7 +69,6 @@
 </script>
 
     <div class="dashboard-wrapper">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -132,9 +129,7 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="dashboard-header">
                 <div class="header-left">
                     <h2>Panneau d'Administration</h2>
@@ -147,7 +142,6 @@
                 </div>
             </header>
 
-            <!-- Manage Users Section -->
             <section class="admin-section">
                 <div class="section-header">
                     <h3>Gestion des Utilisateurs</h3>
@@ -204,7 +198,6 @@
                 </div>
             </section>
 
-            <!-- Create New User Section -->
             <section class="admin-section">
                 <div class="section-header">
                     <h3>Créer un Nouvel Utilisateur</h3>
@@ -240,7 +233,6 @@
                 </form>
             </section>
 
-            <!-- Grant Access Windows -->
             <section class="admin-section">
                 <div class="section-header">
                     <h3>Configurer les Fenêtres d'Accès</h3>
@@ -270,7 +262,6 @@
                 </form>
             </section>
 
-            <!-- Upload Document Section -->
             <section class="admin-section">
                 <div class="section-header">
                     <h3>Télécharger un Document</h3>
