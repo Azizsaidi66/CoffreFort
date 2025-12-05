@@ -56,7 +56,8 @@
             </form>
 
             <div class="login-footer">
-                <p>Projet Coffre-Fort Documentaire 2025</p>
+                <p>Pas de compte? <a href="signup.html" style="color: #0066cc; text-decoration: none;">S'inscrire</a></p>
+                <p style="margin-top: 15px;">Projet Coffre-Fort Documentaire 2025</p>
             </div>
         </div>
 
@@ -64,6 +65,11 @@
     </div>
 
     <script>
+        // Detect API URL based on environment
+        const API_URL = window.location.hostname === 'localhost' 
+            ? "http://localhost:8001" 
+            : `http://${window.location.hostname === '127.0.0.1' ? 'localhost' : 'backend'}:8001`;
+
         // Redirect if already logged in
         if (localStorage.getItem("token")) {
             window.location.href = "dashboard.html";
@@ -76,28 +82,45 @@
             const password = document.getElementById("password").value;
             const role = document.getElementById("role").value;
 
+            // Validate role selection
+            if (!role) {
+                alert("Veuillez sélectionner un rôle");
+                return;
+            }
+
             const formData = new FormData();
             formData.append("email", email);
             formData.append("password", password);
             formData.append("role", role);
 
             try {
-                const res = await fetch("http://localhost:8001/auth/login", {
+                const loginBtn = document.querySelector(".login-button");
+                loginBtn.disabled = true;
+                loginBtn.textContent = "Connexion en cours...";
+
+                const res = await fetch(`${API_URL}/auth/login`, {
                     method: "POST",
                     body: formData
                 });
 
                 const data = await res.json();
 
-                if (res.ok) {
+                if (res.ok && data.access_token) {
                     localStorage.setItem("token", data.access_token);
+                    localStorage.setItem("userEmail", email);
+                    localStorage.setItem("userRole", role);
                     window.location.href = "dashboard.html";
                 } else {
-                    alert(data.detail || "Login failed");
+                    alert(data.detail || "Identifiants invalides. Veuillez réessayer.");
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = "Connexion sécurisée";
                 }
             } catch (err) {
                 console.error(err);
-                alert("Erreur de connexion au serveur");
+                alert("Erreur de connexion au serveur: " + err.message);
+                const loginBtn = document.querySelector(".login-button");
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Connexion sécurisée";
             }
         });
     </script>

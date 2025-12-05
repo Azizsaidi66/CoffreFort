@@ -107,11 +107,27 @@ h6 {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  /* Sunset-over-village gradient */
-  background: linear-gradient(135deg, #6b4423 0%, #5a7a2f 50%, #c89055 100%);
   position: relative;
   overflow: hidden;
+  /* Gradient overlay on top of blurred image */
+  background: linear-gradient(135deg, rgba(107,68,35,0.4) 0%, rgba(90,122,47,0.4) 50%, rgba(200,144,85,0.4) 100%);
 }
+
+.login-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("assets/Vilagego.jpeg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  filter: blur(5px);
+  z-index: 0;
+}
+
 
 /* More prominent thatch and wattle roof texture */
 .login-background {
@@ -121,24 +137,10 @@ h6 {
   right: 0;
   bottom: 0;
   opacity: 0.12;
-  background-image: repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 40px,
-      rgba(200, 144, 85, 0.5) 40px,
-      rgba(200, 144, 85, 0.5) 45px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 40px,
-      rgba(107, 68, 35, 0.4) 40px,
-      rgba(107, 68, 35, 0.4) 45px
-    ), radial-gradient(circle at 20% 50%, rgba(230, 168, 80, 0.1) 0%, transparent 50%);
 }
 
 .login-card {
-  background: var(--bg-primary);
+  background: white;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   width: 100%;
@@ -1118,6 +1120,10 @@ h6 {
     margin-left: 0;
     padding: 16px;
   }
+  .download-button {
+background-color: #3a2e2a
+
+;  } 
 
   .dashboard-header {
     flex-direction: column;

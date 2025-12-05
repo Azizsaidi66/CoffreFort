@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Village Numérique Résilient</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        <circle cx="12" cy="16" r="1"></circle>
+                    </svg>
+                    <h1>Village Numérique Résilient</h1>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2>Créer un compte</h2>
+                <p style="color: #666; margin: 10px 0;">Inscription sécurisée</p>
+            </div>
+
+            <form class="login-form" id="signup-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                        </svg>
+                        <input type="email" id="email" placeholder="nom@ecole.fr" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input type="password" id="password" placeholder="••••••••" required minlength="6">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password-confirm">Confirmer le mot de passe</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input type="password" id="password-confirm" placeholder="••••••••" required minlength="6">
+                    </div>
+                </div>
+
+                <div class="form-group role-select">
+                    <label for="role">Rôle</label>
+                    <select id="role" required>
+                        <option value="">Sélectionner un rôle</option>
+                        <option value="user">Utilisateur</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="login-button">S'inscrire</button>
+            </form>
+
+            <div class="login-footer">
+                <p>Vous avez déjà un compte? <a href="login.html" style="color: #0066cc; text-decoration: none;">Se connecter</a></p>
+                <p style="margin-top: 15px;">Projet Coffre-Fort Documentaire 2025</p>
+            </div>
+        </div>
+
+        <div class="login-background"></div>
+    </div>
+
+    <script>
+        // Detect API URL based on environment
+        const API_URL = window.location.hostname === 'localhost' 
+            ? "http://localhost:8001" 
+            : `http://${window.location.hostname === '127.0.0.1' ? 'localhost' : 'backend'}:8001`;
+
+        // Redirect if already logged in
+        if (localStorage.getItem("token")) {
+            window.location.href = "dashboard.html";
+        }
+
+        document.getElementById("signup-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const passwordConfirm = document.getElementById("password-confirm").value;
+            const role = document.getElementById("role").value;
+
+            // Validate role selection
+            if (!role) {
+                alert("Veuillez sélectionner un rôle");
+                return;
+            }
+
+            // Validate passwords match
+            if (password !== passwordConfirm) {
+                alert("Les mots de passe ne correspondent pas");
+                return;
+            }
+
+            // Validate password length
+            if (password.length < 6) {
+                alert("Le mot de passe doit contenir au moins 6 caractères");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("email", email);
+            formData.append("password", password);
+            formData.append("role", role);
+
+            try {
+                const signupBtn = document.querySelector(".login-button");
+                signupBtn.disabled = true;
+                signupBtn.textContent = "Inscription en cours...";
+
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.access_token) {
+                    localStorage.setItem("token", data.access_token);
+                    localStorage.setItem("userEmail", email);
+                    localStorage.setItem("userRole", role);
+                    
+                    // Redirect to dashboard
+                    window.location.href = "dashboard.html";
+                } else {
+                    alert(data.detail || "L'inscription a échoué. Veuillez réessayer.");
+                    signupBtn.disabled = false;
+                    signupBtn.textContent = "S'inscrire";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur de connexion au serveur: " + err.message);
+                const signupBtn = document.querySelector(".login-button");
+                signupBtn.disabled = false;
+                signupBtn.textContent = "S'inscrire";
+            }
+        });
+    </script>
+</body>
+</html>
