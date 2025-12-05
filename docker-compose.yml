@@ -69,6 +69,7 @@ services:
       MAYAN_API_URL: http://mayan:8000
     volumes:
       - ./backend:/app
+      - ./backend/uploads:/app/uploads
     restart: always
     networks:
       - coffre-network

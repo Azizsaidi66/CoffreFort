@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, Form, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Form, UploadFile, File, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Integer, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -10,7 +11,6 @@ import os
 import requests
 import json
 import uuid
-from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import httpx
@@ -19,14 +19,14 @@ import httpx
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mayan:mayanpassword@postgres:5432/coffre_fort")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://ollama:11434")
 MAYAN_API_URL = os.getenv("MAYAN_API_URL", "http://mayan:8000")
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./backend/uploads")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ==================== DATABASE ====================
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, future=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -64,7 +64,7 @@ class Document(Base):
     ai_keywords = Column(Text, nullable=True)
     file_path = Column(String, nullable=True)
 
-class Session(Base):
+class SessionModel(Base):
     __tablename__ = "sessions"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -84,6 +84,7 @@ def hash_password(password: str) -> str:
         password = str(password)
     pw_bytes = password.encode("utf-8")
     if len(pw_bytes) > 72:
+        # reject or truncate; here we reject at API level, but keep safe truncation for hashing
         password = pw_bytes[:72].decode("utf-8", errors="ignore")
     return pwd_context.hash(password)
 
@@ -112,12 +113,18 @@ def get_db():
     finally:
         db.close()
 
-async def get_current_user(token: str, db: Session = Depends(get_db)):
+async def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not authorization:
+        raise credentials_exception
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise credentials_exception
+    token = parts[1]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("sub")
@@ -157,8 +164,8 @@ async def register(
         raise HTTPException(status_code=400, detail="Email already registered")
     
     if len(password.encode("utf-8")) > 72:
-        pass
-    
+        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
+
     user = User(
         email=email,
         hashed_password=hash_password(password),
@@ -257,6 +264,9 @@ async def create_user(
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already exists")
     
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes).")
+
     user = User(
         email=email,
         hashed_password=hash_password(password),
@@ -405,6 +415,10 @@ async def analyze_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    # permission
+    if current_user.role != "admin" and doc.uploaded_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed to analyze this document")
+    
     analysis = await analyze_with_ollama(text, background_tasks)
     
     doc.ai_summary = analysis["summary"]
@@ -412,6 +426,70 @@ async def analyze_document(
     db.commit()
     
     return analysis
+
+# helper: extract text from uploaded file
+async def extract_text_from_file(file_path: str) -> str:
+    ext = os.path.splitext(file_path)[1].lower()
+    # PDF
+    if ext == ".pdf":
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(file_path)
+            text_parts = []
+            for page in doc:
+                text_parts.append(page.get_text())
+            return "\n".join(text_parts)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF parsing failed: {e}")
+    # DOCX
+    if ext == ".docx":
+        try:
+            import docx
+            doc = docx.Document(file_path)
+            return "\n".join(p.text for p in doc.paragraphs)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"DOCX parsing failed: {e}")
+    # Plain text fallback
+    try:
+        with open(file_path, "rb") as f:
+            raw = f.read()
+            return raw.decode("utf-8", errors="ignore")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File read failed: {e}")
+
+# analyze by document id using the uploaded file
+@app.post("/documents/analyze-file/{document_id}")
+async def analyze_file_from_upload(
+    document_id: int,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if current_user.role != "admin" and doc.uploaded_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    if not getattr(doc, "file_path", None):
+        raise HTTPException(status_code=400, detail="No file attached")
+    file_path = os.path.join(UPLOAD_DIR, doc.file_path)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Uploaded file not found")
+
+    text = await extract_text_from_file(file_path)
+    analysis = await analyze_with_ollama(text, background_tasks)
+
+    doc.ai_summary = analysis.get("summary", "")
+    doc.ai_keywords = analysis.get("keywords", "")
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "document_id": doc.id,
+        "summary": doc.ai_summary,
+        "keywords": doc.ai_keywords,
+        "file_url": f"/uploads/{doc.file_path}"
+    }
 
 # ==================== DOCUMENT MANAGEMENT ====================
 @app.post("/documents/upload")
@@ -422,9 +500,7 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
+    """Allow any authenticated user to upload; record uploader id."""
     try:
         ext = os.path.splitext(file.filename)[1]
         unique_name = f"{uuid.uuid4().hex}{ext}"
@@ -459,7 +535,11 @@ async def list_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    documents = db.query(Document).all()
+    if current_user.role == "admin":
+        documents = db.query(Document).all()
+    else:
+        documents = db.query(Document).filter(Document.uploaded_by == current_user.id).all()
+
     return [
         {
             "id": d.id,
@@ -490,8 +570,11 @@ async def get_document(
         "description": doc.description,
         "ai_summary": doc.ai_summary,
         "ai_keywords": doc.ai_keywords,
-        "created_at": doc.created_at
+        "created_at": doc.created_at,
+        "file_url": (f"/uploads/{doc.file_path}" if getattr(doc, "file_path", None) else None)
     }
+
+
 
 # ==================== MAYAN INTEGRATION ====================
 @app.post("/mayan/sso-token")
@@ -524,4 +607,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
