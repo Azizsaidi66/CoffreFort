@@ -7,12 +7,27 @@ services:
       POSTGRES_PASSWORD: mayanpassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mayan -d mayan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
+    networks:
+      - coffre-network
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    networks:
+      - coffre-network
 
   mayan:
     image: mayanedms/mayanedms:latest
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
@@ -21,9 +36,12 @@ services:
       MAYAN_DATABASE_USER: mayan
       MAYAN_DATABASE_PASSWORD: mayanpassword
       MAYAN_DATABASE_HOST: postgres
+      MAYAN_REDIS_URL: redis://redis:6379/0
     volumes:
       - mayan_data:/var/lib/mayan
     restart: always
+    networks:
+      - coffre-network
 
   ollama:
     image: ollama/ollama:latest
@@ -31,19 +49,40 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
     restart: always
+    networks:
+      - coffre-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://mayan:mayanpassword@postgres:5432/coffre_fort
+      SECRET_KEY: your-super-secret-key-change-in-production
+      OLLAMA_API_URL: http://ollama:11434
+      MAYAN_API_URL: http://mayan:8000
+    volumes:
+      - ./backend:/app
+    restart: always
+    networks:
+      - coffre-network
+    command: sh -c "sleep 5 && python -m uvicorn app:app --host 0.0.0.0 --port 8000"
 
   frontend:
     build: ./frontend
     ports:
       - "8080:80"
-
-  backend:
-    build: ./backend
-    ports:
-      - "8001:8001"
+    depends_on:
+      - backend
+    restart: always
     networks:
-      - internal
+      - coffre-network
 
 volumes:
   postgres_data:
@@ -51,5 +90,5 @@ volumes:
   ollama_data:
 
 networks:
-  internal:
+  coffre-network:
     driver: bridge
